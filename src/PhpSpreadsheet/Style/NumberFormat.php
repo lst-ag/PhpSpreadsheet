@@ -6,6 +6,7 @@ use PhpOffice\PhpSpreadsheet\Calculation\MathTrig;
 use PhpOffice\PhpSpreadsheet\Exception as PhpSpreadsheetException;
 use PhpOffice\PhpSpreadsheet\Shared\Date;
 use PhpOffice\PhpSpreadsheet\Shared\StringHelper;
+use SylvainCombes\Lcid\Finder;
 
 class NumberFormat extends Supervisor
 {
@@ -436,6 +437,40 @@ class NumberFormat extends Supervisor
             '.s' => '',
         ];
 
+    private static $localizedDateFormatReplacements = [
+        //    12-hour suffix
+        'A' => '%p',
+        //    4-digit year
+        'Y' => '%Y',
+        //    2-digit year
+        'y' => '%y',
+        //    first letter of month - no php equivalent
+        'M' => '%b',
+        //    full month name
+        'F' => '%B',
+        //    short month name
+        'M' => '%b',
+        //    mm is minutes if time, but can also be month w/leading zero
+        //    so we try to identify times be the inclusion of a : separator in the mask
+        //    It isn't perfect, but the best way I know how
+        ':i' => ':%M',
+        'i:' => '%M:',
+        //    month leading zero
+        'm' => '%m',
+        //    month no leading zero
+        'n' => '%-m',
+        //    full day of week name
+        'l' => '%A',
+        //    short day of week name
+        'D' => '%a',
+        //    days leading zero
+        'd' => '%d',
+        //    days no leading zero
+        'j' => '%-d',
+        //    seconds
+        's' => '%S',
+    ];
+
     /**
      * Search/replace values to convert Excel date/time format masks hours to PHP format masks (24 hr clock).
      *
@@ -447,6 +482,16 @@ class NumberFormat extends Supervisor
     ];
 
     /**
+     * Search/replace values to convert Excel date/time format masks hours to localized PHP format masks (24 hr clock).
+     *
+     * @var array
+     */
+    private static $localizedDateFormatReplacements24 = [
+        'H' => '%H',
+        'G' => '%k',
+    ];
+
+    /**
      * Search/replace values to convert Excel date/time format masks hours to PHP format masks (12 hr clock).
      *
      * @var array
@@ -454,6 +499,16 @@ class NumberFormat extends Supervisor
     private static $dateFormatReplacements12 = [
         'hh' => 'h',
         'h' => 'g',
+    ];
+
+    /**
+     * Search/replace values to convert Excel date/time format masks hours to localized PHP format masks (12 hr clock).
+     *
+     * @var array
+     */
+    private static $localizedDateFormatReplacements12 = [
+        'h' => '%I',
+        'g' => '%l',
     ];
 
     private static function setLowercaseCallback($matches)
@@ -468,6 +523,26 @@ class NumberFormat extends Supervisor
 
     private static function formatAsDate(&$value, &$format)
     {
+        $languageCode = null;
+        $languageParts = [];
+        $languageCodeDefined = preg_match('/(\[\$[A-Z]*-[0-9A-F]*\])/i', $format, $languageParts);
+
+        if ($languageCodeDefined) {
+            $hexLanguageCode = substr($languageParts[0], 3, strlen($languageParts[0]) - 4);
+            $decLanguageCode = hexdec($hexLanguageCode);
+
+            $finder = new Finder();
+            $locale = $finder->findByLcidWithFallback($decLanguageCode);
+
+            if (null === $locale) {
+                $locale = 'de_CH';
+            }
+
+            setlocale(LC_TIME, $locale);
+        }
+
+        $format = str_replace('/', '.', $format);
+
         // strip off first part containing e.g. [$-F800] or [$USD-409]
         // general syntax: [$<Currency string>-<language info>]
         // language info is in hexadecimal
@@ -483,7 +558,8 @@ class NumberFormat extends Supervisor
         foreach ($blocks as $key => &$block) {
             if ($key % 2 == 0) {
                 $block = strtr($block, self::$dateFormatReplacements);
-                if (!strpos($block, 'A')) {
+                $block = strtr($block, self::$localizedDateFormatReplacements);
+                if (!strpos($block, '%p')) {
                     // 24-hour time format
                     // when [h]:mm format, the [h] should replace to the hours of the value * 24
                     if (false !== strpos($block, '[h]')) {
@@ -493,9 +569,11 @@ class NumberFormat extends Supervisor
                         continue;
                     }
                     $block = strtr($block, self::$dateFormatReplacements24);
+                    $block = strtr($block, self::$localizedDateFormatReplacements24);
                 } else {
                     // 12-hour time format
                     $block = strtr($block, self::$dateFormatReplacements12);
+                    $block = strtr($block, self::$localizedDateFormatReplacements12);
                 }
             }
         }
@@ -505,7 +583,7 @@ class NumberFormat extends Supervisor
         $format = preg_replace_callback('/"(.*)"/U', ['self', 'escapeQuotesCallback'], $format);
 
         $dateObj = Date::excelToDateTimeObject($value);
-        $value = $dateObj->format($format);
+        $value = strftime(stripslashes($format), $dateObj->getTimestamp());
     }
 
     private static function formatAsPercentage(&$value, &$format)
