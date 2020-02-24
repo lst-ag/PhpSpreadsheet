@@ -583,7 +583,8 @@ class NumberFormat extends Supervisor
         $format = preg_replace_callback('/"(.*)"/U', ['self', 'escapeQuotesCallback'], $format);
 
         $dateObj = Date::excelToDateTimeObject($value);
-        $value = strftime(stripslashes($format), $dateObj->getTimestamp());
+        $localizedDateString = strftime(stripslashes($format), $dateObj->getTimestamp());
+        $value = utf8_encode($localizedDateString);
     }
 
     private static function formatAsPercentage(&$value, &$format)
