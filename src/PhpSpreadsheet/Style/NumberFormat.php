@@ -282,10 +282,10 @@ class NumberFormat extends Supervisor
             self::$builtInFormats[21] = 'h:mm:ss';
             self::$builtInFormats[22] = 'm/d/yyyy h:mm'; // Despite ECMA 'm/d/yy h:mm';
 
-            self::$builtInFormats[37] = '#,##0_);(#,##0)'; //  Despite ECMA '#,##0 ;(#,##0)';
-            self::$builtInFormats[38] = '#,##0_);[Red](#,##0)'; //  Despite ECMA '#,##0 ;[Red](#,##0)';
-            self::$builtInFormats[39] = '#,##0.00_);(#,##0.00)'; //  Despite ECMA '#,##0.00;(#,##0.00)';
-            self::$builtInFormats[40] = '#,##0.00_);[Red](#,##0.00)'; //  Despite ECMA '#,##0.00;[Red](#,##0.00)';
+            self::$builtInFormats[37] = '#,##0_);-#,##0'; //  Despite ECMA '#,##0 ;(#,##0)';
+            self::$builtInFormats[38] = '#,##0_);[Red]-#,##0'; //  Despite ECMA '#,##0 ;[Red](#,##0)';
+            self::$builtInFormats[39] = '#,##0.00_);-#,##0.00'; //  Despite ECMA '#,##0.00;(#,##0.00)';
+            self::$builtInFormats[40] = '#,##0.00_);[Red]-#,##0.00'; //  Despite ECMA '#,##0.00;[Red](#,##0.00)';
 
             self::$builtInFormats[44] = '_("$"* #,##0.00_);_("$"* \(#,##0.00\);_("$"* "-"??_);_(@_)';
             self::$builtInFormats[45] = 'mm:ss';
